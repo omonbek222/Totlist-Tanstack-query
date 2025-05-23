@@ -1,88 +1,38 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axios from 'axios'
-import { useState } from 'react'
-import './App.css'
+import React, { useState } from 'react';
+import InfiniteScrollAlbums from './InfiniteScrollAlbums';
+import ButtonLoadAlbums from './ButtonLoadAlbums';
+import PaginatedAlbums from './PaginatedAlbums';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Button } from 'antd';
 
-const API_URL = 'http://localhost:3000/todos'
-
-const fetchTodos = async () => {
-  const res = await axios.get(API_URL)
-  return res.data
-}
+const queryClient = new QueryClient();
 
 function App() {
-  const queryClient = useQueryClient()
-  const [text, setText] = useState('')
-  const [editId, setEditId] = useState(null)
-
-  const { data: todos, isLoading } = useQuery({
-    queryKey: ['todos'],
-    queryFn: fetchTodos,
-  })
-
-  const addTodo = useMutation({
-    mutationFn: (newTodo) => axios.post(API_URL, newTodo),
-    onSuccess: () => queryClient.invalidateQueries(['todos']),
-  })
-
-  const updateTodo = useMutation({
-    mutationFn: ({ id, text }) => axios.put(`${API_URL}/${id}`, { id, text }),
-    onSuccess: () => queryClient.invalidateQueries(['todos']),
-  })
-
-  const deleteTodo = useMutation({
-    mutationFn: (id) => axios.delete(`${API_URL}/${id}`),
-    onSuccess: () => queryClient.invalidateQueries(['todos']),
-  })
-
-  const handleSubmit = () => {
-    if (!text.trim()) return
-    if (editId !== null) {
-      updateTodo.mutate({ id: editId, text })
-      setEditId(null)
-    } else {
-      addTodo.mutate({ text })
-    }
-    setText('')
-  }
-
-  const startEdit = (todo) => {
-    setText(todo.text)
-    setEditId(todo.id)
-  }
-
-  if (isLoading) return <p className="loading">Yuklanmoqda...</p>
+  const [mode, setMode] = useState('scroll'); // 'scroll', 'button', 'pagination'
 
   return (
-    <div className="container">
-      <h1 className="title">📋 To-Do List</h1>
+    <QueryClientProvider client={queryClient}>
+      <div className="p-10">
+        <h1 className="text-2xl font-bold mb-5">TanStack Query - 3 xil yuklash usuli</h1>
 
-      <div className="input-group">
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Yangi vazifa..."
-          className="input"
-        />
-        <button onClick={handleSubmit} className="btn">
-          {editId !== null ? 'Yangilash' : 'Qo‘shish'}
-        </button>
+        <div className="mb-6 flex gap-3">
+          <Button type={mode === 'scroll' ? 'primary' : 'default'} onClick={() => setMode('scroll')}>
+            Scroll bilan
+          </Button>
+          <Button type={mode === 'button' ? 'primary' : 'default'} onClick={() => setMode('button')}>
+            Button bosib
+          </Button>
+          <Button type={mode === 'pagination' ? 'primary' : 'default'} onClick={() => setMode('pagination')}>
+            Pagination (1, 2, 3)
+          </Button>
+        </div>
+
+        {mode === 'scroll' && <InfiniteScrollAlbums />}
+        {mode === 'button' && <ButtonLoadAlbums />}
+        {mode === 'pagination' && <PaginatedAlbums />}
       </div>
-
-      <ul className="todo-list">
-        {todos.map((todo) => (
-          <li key={todo.id} className="todo-item">
-            <span>{todo.text}</span>
-            <div className="actions">
-              <button onClick={() => startEdit(todo)} className="edit">✏️</button>
-              <button onClick={() => deleteTodo.mutate(todo.id)} className="delete">🗑️</button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
+    </QueryClientProvider>
+  );
 }
 
-export default App
+export default App;
